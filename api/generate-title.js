@@ -1,11 +1,30 @@
 /**
- * Serverless: по тексту промпта возвращает короткий заголовок через DeepSeek API.
- * В настройках деплоя задайте переменную DEEPSEEK_API_KEY (ваш ключ).
+ * Serverless-функция для Vercel (проект generate-title-lib2).
+ * По тексту промпта возвращает короткий заголовок через DeepSeek API.
+ * CORS включён для запросов из расширения Chrome.
+ * Ключ: переменная окружения DEEPSEEK_API_KEY.
  */
 
 const DEEPSEEK_URL = 'https://api.deepseek.com/v1/chat/completions';
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Headers': 'Content-Type',
+};
+
+function setCors(res) {
+  Object.entries(CORS_HEADERS).forEach(([k, v]) => res.setHeader(k, v));
+}
+
 export default async function handler(req, res) {
+  setCors(res);
+
+  if (req.method === 'OPTIONS') {
+    res.status(204).end();
+    return;
+  }
+
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' });
     return;
