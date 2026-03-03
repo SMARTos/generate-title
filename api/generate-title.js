@@ -7,6 +7,17 @@
 
 const DEEPSEEK_URL = 'https://api.deepseek.com/v1/chat/completions';
 
+/** Максимум символов текста для генерации заголовка (лимит запроса к API) */
+const MAX_TEXT_LENGTH = 4000;
+
+function truncateText(s) {
+  const t = (s || '').trim();
+  if (t.length <= MAX_TEXT_LENGTH) return t;
+  const cut = t.slice(0, MAX_TEXT_LENGTH);
+  const lastSpace = cut.lastIndexOf(' ');
+  return lastSpace > 0 ? cut.slice(0, lastSpace) : cut;
+}
+
 const CORS_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
@@ -44,11 +55,12 @@ export default async function handler(req, res) {
     return;
   }
 
-  const text = (body?.text || '').trim();
+  let text = (body?.text || '').trim();
   if (!text) {
     res.status(400).json({ error: 'Missing or empty "text"' });
     return;
   }
+  text = truncateText(text);
 
   try {
     const response = await fetch(DEEPSEEK_URL, {
@@ -62,15 +74,15 @@ export default async function handler(req, res) {
         messages: [
           {
             role: 'system',
-            content: 'Ты делаешь заголовки для промтов. На вход получаешь текст и должен сделать заголовок для этого промпта (до 4–7 слов), на том же языке, что и текст. 
-              Без кавычек и пояснений — только заголовок. 
-              Обязательно проверь что на выходе ты получил заголовок не более 7 слов, если нет то сделай все заново!
-              Последний этап - проверь что в результате ты не отдаешь более 7 слов.',
+            content: `Ты генерируешь только заголовок для текста. Правила строго:
+1. Выведи ОДНУ короткую фразу (4–8 слов) — название/заголовок к тексту, на том же языке.
+2. НЕ переписывай, НЕ копируй и НЕ повторяй текст пользователя. НЕ давай сам текст, инструкции или развёрнутый ответ — только заголовок.
+3. Формат ответа: одна строка, без кавычек, без точки в конце, без пояснений.`,
           },
           { role: 'user', content: text },
         ],
         max_tokens: 50,
-        temperature: 0.3,
+        temperature: 0.2,
       }),
     });
 
